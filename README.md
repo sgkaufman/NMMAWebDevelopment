@@ -1,6 +1,6 @@
 # NMMA Web Development
 # System Architecture
-## RMS Stations belonging to the New Mexico Meteor Array. These are Raspberry-Pi based stations, runnig either the Jessie or Buster versions of the Raspbian OS. There are about 23 stations.
+## RMS Stations belonging to the New Mexico Meteor Array. These are primarily Raspberry-Pi based stations, running either the Jessie or Buster versions of the Raspbian OS. Some stations use a more powerful Linux computer hosting more than one camera. There are about 23 stations.
 ## Data Server - this host collects data from RMS meteor stations. Fourteen data files are uploaded to the Data Server each morning from each station. There may be fewer than fourteen files if no meteors were detected during the night.
 ## Web Server - This is the host for the website nm-meteors.net. It is a different host than the data server. Four files per RMS station are selected from the data server.  
 # Files in this repository
