@@ -15,16 +15,17 @@
 #    Third is year, in four digits.
 # If left out, they default to the current calendar value at time of call.
 
+
 declare -a station_list=('US0001' 'US0002' 'US0003' 'US0004' 'US0005' 'US0006' \
 				 'US0007' 'US0008' 'US0009' 'US000A' 'US000C' \
 				 'US000D' 'US000E' 'US000G' 'US000H' 'US000J' \
 				 'US000K' 'US000L' 'US000M' 'US000N' 'US000P' \
-				 'US000R' 'US001L' \
+				 'US000R' 'US001L' 'US001P' \
 			)
 
-declare -a file_names=('*meteors.jpg' '*captured.jpg' \
-				      '*calib_report_astrometry.jpg' \
-				      '*calib_report_photometry.png' \
+declare -a file_names=("*meteors.jpg" "*captured.jpg" \
+				      "*calib_report_astrometry.jpg" \
+				      "*calib_report_photometry.png" \
 		      )
 
 declare -A station_meteor_jpg
@@ -35,7 +36,7 @@ declare -A station_photo_calib
 declare -i day_num month_num year_num
 
 declare src='/home/pi/RMS_Station_data'
-declare dst='/var/www/html/images'
+declare dst='/var/www/html/uploads'
 
 # First parameter is day, 2nd is month, 3rd is year.
 # If one is missing, it is replaced by the current time value.
@@ -53,7 +54,9 @@ if [[ $# -ge 1 ]]; then
 	echo "First argument must be a number between 1 and 31"
 	exit 1
     }
-    fi	
+    fi
+else
+    echo "No arguments given"
 fi
 
 if [[ $# -ge 2 ]]; then
@@ -62,6 +65,17 @@ if [[ $# -ge 2 ]]; then
 	mo=$2
     else {
 	echo "Second argument must be a number between 1 and 12"
+	exit 1
+    }
+    fi
+fi
+
+if [[ $# -ge 3 ]]; then
+    yr_num=10#"$3"
+    if (( 2020 <= $yr_num && $yr_num <= 2022 )); then
+	yr=$3
+    else {
+	echo "Third argument must be a number between 2020 and 2022"
 	exit 1
     }
     fi
@@ -87,21 +101,30 @@ if [[ ! -d "$dst"/"$yr"/"$mo"/"$dy" ]]; then
 fi
 
 new_dst="$dst"/"$yr"/"$mo"/"$dy"
-short_dst="images"/"$yr"/"$mo"/"$dy"
+short_dst="uploads"/"$yr"/"$mo"/"$dy"
 
 pushd "$src"
+
+# Clear out the ./daily_stage directory
+rm ./daily_stage/counts/*
+rm ./daily_stage/stacks/*
+rm ./daily_stage/*
+
 for station in "${station_list[@]}"; do
     env printf '%s: ' "$station";
     for f in "${file_names[@]}"; do 
-	     full_file_name=$(find . -name "$station"_"$today""$f" -print)
-    
+	     full_file_name=$(find . -name "${station}"_"${today}""${f}" -print)
+	     
 	     # Now we want to strip out the middle part for image filenames,
 	     # corresponding to date, seconds, and microseconds. Grep for 
 	     # the trailing part of the file name to append to station
-	     # to strip out fractioal second information.
+	     # to strip out fractional second information.
 	     # First check that the stack of detected meteors is really there.
     
 	     if [[ -n "$full_file_name" ]]; then
+
+		 curl -F "type=IMAGE" -F"upload=@$full_file_name" \
+       		      "https://nm-meteors.net/test-upload-bh.php"
 
 		 # Need to grep for different strings depending on file name
 		 st=$(echo "$full_file_name" | grep -o 'stack')
@@ -132,8 +155,13 @@ for station in "${station_list[@]}"; do
 	     else
 		 env printf 'no file found\n'
 	     fi
-    done
-done
+    done     # end of file type loop
+
+    # Now the fits_counts.txt files
+    fits_file=$(find . -name "$station""_fits_counts.txt")
+    printf "fits file: %s\n" $fits_file
+    cp $fits_file $new_dst
+done # end of station loop
 popd
 
 for station in "${station_list[@]}"; do
@@ -155,6 +183,8 @@ for station in "${station_list[@]}"; do
     env printf 'Station %s photo calibration: %s\n' "$station" \
 	    "${station_photo_calib[$station]}"
 done
+
+
 
 printf '%d stations have uploaded so far\n' ${#station_meteor_jpg[@]}
 
